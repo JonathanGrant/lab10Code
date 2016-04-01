@@ -21,7 +21,20 @@ class ParticleFilter:
         self.particles = self.createUniformParticles(boundsX, boundsY, boundsTheta, variances)
         print("Particles are done being created.")
         
-    
+    def removeOutOfBoundsParticles(self):
+        toDelete = []
+        for particle in self.particles:
+            if not particle.x in range(self.theMap.bottom_left[0],self.theMap.top_right[0]):
+                #delete particle and add new one randomly
+                toDelete.append(particle)
+            elif not particle.y in range(self.theMap.bottom_left[1], self.theMap.top_right[1]):
+                toDelete.append(particle)
+        for particle in toDelete:
+            self.deleteParticleAndAddNewOne(particle)
+                
+    def deleteParticleAndAddNewOne(self, particle):
+        self.particles.remove(particle)
+        self.particles.append(self.createUniformParticle([self.theMap.bottom_left[0], self.theMap.top_right[0]],[self.theMap.bottom_left[1], self.theMap.top_right[1]], [0, 2*math.pi], [0.1,0.1,0.3]))
     
     def getParticles(self):
         return self.particles
@@ -45,6 +58,7 @@ class ParticleFilter:
             particle.x += distPrime * math.cos(particle.theta)
             particle.y += distPrime * math.sin(particle.theta)
         print("Particles are done moving.")
+        self.removeOutOfBoundsParticles()
     
     def Sensing(self, reading):
         prob = []
