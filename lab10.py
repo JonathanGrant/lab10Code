@@ -62,6 +62,7 @@ class Run:
             self.showParticles([particle.x,particle.y,0.1,particle.theta])
         
         # This is an example on how to detect that a button was pressed in V-REP
+        bNum = 0
         while True:
             self.create.drive_direct(0,0)
             
@@ -72,7 +73,16 @@ class Run:
                 prevY = self.odometry.y
                 prevTheta = self.odometry.theta
 
-                b = self.virtual_create.get_last_button()
+                #b = self.virtual_create.get_last_button()
+                if self.pf.isOneCluster():
+                    break
+                if bNum % 3 == 0:
+                    b = self.virtual_create.Button.Sense
+                elif bNum % 3 == 1:
+                    b = self.virtual_create.Button.TurnLeft
+                elif bNum % 3 == 2:
+                    b = self.virtual_create.Button.MoveForward
+                bNum += 1
                 if b == self.virtual_create.Button.MoveForward:
                     print("Forward pressed!")
                     self.create.drive_direct(50,50)
