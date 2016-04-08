@@ -124,3 +124,13 @@ class ParticleFilter:
     
     def moveNormalParticle(self, particle, dX, dY, dTheta):
         return [self.doNormal(dX, particle.varX), self.doNormal(dY, particle.varY), self.doNormal(dTheta, particle.varTheta)]
+    
+    def isOneCluster(self):
+        startX, startY = self.particles[0].x, self.particles[0].y
+        for particle in self.particles:
+            if abs(particle.x - startX) > 0.2:
+                return False
+            if abs(particle.y - startY) > 0.2:
+                return False
+        print("Localized! Stopping")
+        return True
