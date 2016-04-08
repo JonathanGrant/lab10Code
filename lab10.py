@@ -16,7 +16,7 @@ class Run:
         self.servo = factory.create_servo()
         self.sonar = factory.create_sonar()
         # Add the IP-address of your computer here if you run on the robot
-        self.virtual_create = factory.create_virtual_create("192.168.1.232")
+        self.virtual_create = factory.create_virtual_create()
         self.map = lab10_map.Map("lab10.map")
         self.odometry = Odometry()
         
