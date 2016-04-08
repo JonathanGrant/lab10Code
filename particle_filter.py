@@ -2,15 +2,19 @@ import math
 import numpy as np
 import scipy.stats
 
+numParticles = 200
+
 class Particle:
-    def __init__(self, x, y, theta, variances):
+    def __init__(self, x, y, theta, variances, prob):
         #Fill in Location
         self.x = x
         self.y = y
         self.theta = theta
+        self.variances = variances
         self.varX = variances[0]
         self.varY = variances[1]
         self.varTheta = variances[2]
+        self.prevProb = prob
 
 class ParticleFilter:
     def __init__(self, boundsX, boundsY, boundsTheta, variances, theMap):
@@ -58,7 +62,7 @@ class ParticleFilter:
             particle.x += distPrime * math.cos(particle.theta)
             particle.y += distPrime * math.sin(particle.theta)
         print("Particles are done moving.")
-        self.removeOutOfBoundsParticles()
+        #self.removeOutOfBoundsParticles()
     
     def Sensing(self, reading):
         prob = []
@@ -66,13 +70,39 @@ class ParticleFilter:
         for particle in self.particles:
             dist = self.theMap.closest_distance((particle.x, particle.y), particle.theta)
             if dist:
-                prob.append(scipy.stats.norm(reading, 0.1).pdf(dist))
+                num = scipy.stats.norm(dist, 0.05).pdf(reading)
+                particle.sensorGivenLocation = num
+                prob.append(num)
+            else:
+                particle.sensorGivenLocation = 0
+                prob.append(0)
+        
+        print("No more Particles in LA")
+        sumOfNumerators = 0
+        for particle in self.particles:
+            particle.numeratorOfBayes = particle.sensorGivenLocation * particle.prevProb
+            sumOfNumerators += particle.numeratorOfBayes
+        #Okay Cool
+        N = 1 / sumOfNumerators
+        newProbSum = 0
+        totalProbList = []
+        for particle in self.particles:
+            newProb = particle.numeratorOfBayes * N
+            print("weight",newProb)
+            newProbSum += newProb
+            #particle.prevProb = newProb
+            totalProbList.append(newProb)
+            
         #Based on that, resample from that data
         newParticles = []
-        for i in range(0,100):
-            party = np.random.choice(self.particles,1,prob)[0]
-            newParticles.append(self.createUniformParticle([party.x-0.1,party.x+0.1], [party.y-0.1,party.y+0.1], [party.theta-0.3,party.theta+0.3],[party.varX,party.varY,party.varTheta]))
+        for i in range(0, numParticles):
+            reference = np.random.choice(self.particles,1,True,totalProbList)[0]
+            newParticles.append( Particle(reference.x, reference.y, reference.theta, reference.variances, 1/float(numParticles)))
+            
+        #Particles should have uniform probabilities
+        
         self.particles = newParticles
+        print(len(self.particles))
     
     def Estimation(self):
         pass
@@ -83,13 +113,13 @@ class ParticleFilter:
     def doUniform(self, minnie, maxie):
         return np.random.uniform(minnie,maxie)
     
-    def createUniformParticle(self, boundsX, boundsY, boundsTheta, variances):
-        return Particle(self.doUniform(boundsX[0], boundsX[1]), self.doUniform(boundsY[0], boundsY[1]), self.doUniform(boundsTheta[0], boundsTheta[1]), variances)
+    def createUniformParticle(self, boundsX, boundsY, boundsTheta, variances, prob):
+        return Particle(self.doUniform(boundsX[0], boundsX[1]), self.doUniform(boundsY[0], boundsY[1]), self.doUniform(boundsTheta[0], boundsTheta[1]), variances, prob)
     
     def createUniformParticles(self, boundsX, boundsY, boundsTheta, variances):
         Particles = []
-        for i in range(0, 100):
-            Particles.append(Particle(self.doUniform(boundsX[0], boundsX[1]), self.doUniform(boundsY[0], boundsY[1]), self.doUniform(boundsTheta[0], boundsTheta[1]), variances))
+        for i in range(0, numParticles):
+            Particles.append(Particle(self.doUniform(boundsX[0], boundsX[1]), self.doUniform(boundsY[0], boundsY[1]), 0, variances, 1/float(numParticles)))#self.doUniform(boundsTheta[0], boundsTheta[1]), variances))
         return Particles
     
     def moveNormalParticle(self, particle, dX, dY, dTheta):
