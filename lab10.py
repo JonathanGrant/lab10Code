@@ -17,7 +17,7 @@ class Run:
         self.sonar = factory.create_sonar()
         # Add the IP-address of your computer here if you run on the robot
         self.virtual_create = factory.create_virtual_create()
-        self.map = lab10_map.Map("lab10.map")
+        self.map = lab10_map.Map("lab11.map")
         self.odometry = Odometry()
         
     def showParticles(self, particles):
@@ -25,6 +25,63 @@ class Run:
         
     def visualizePose(self,x,y,z,theta):
         self.virtual_create.set_pose((x, y, z), theta)
+        
+    def turnLeftOneSec(self):
+        self.create.drive_direct(50,-50)
+        self.time.sleep(1)
+        self.create.drive_direct(0,0)
+        self.state = self.create.update()
+        self.odometry.update(self.state.leftEncoderCounts, self.state.rightEncoderCounts)
+        self.pf.TurnLeft()
+        
+    def redrawParticles(self):
+        for particle in self.pf.getParticles():
+                self.showParticles([particle.x,particle.y,0.1,particle.theta])
+        
+    def findAndGoOnClearPath(self):
+        #Find new angle to move at
+        foundNewAngle = False
+        foundStartTime = False
+        runTime = 0
+        #Turn robot until clear space is found
+        while not foundNewAngle:
+            #Turn robot
+            self.turnLeftOneSec()
+            self.redrawParticles()
+            distanceFromNearestObstacle = self.sonar.get_distance()
+            obstacleAhead = distanceFromNearestObstacle < 0.001
+            
+            if not obstacleAhead:
+                if not foundStartTime:
+                    foundStartTime = True
+                else:
+                    runTime += 1
+            
+            if foundStartTime and runTime >= 4:
+                foundNewAngle = True
+            elif obstacleAhead and runTime < 4:
+                foundStartTime = False
+                runTime = 0
+
+        #Now turn the other way
+        turnRightTime = int(runTime / 2)
+        for i in range(0, turnRightTime):
+            self.create.drive_direct(-50,50)
+            self.time.sleep(1)
+            self.create.drive_direct(0,0)
+            self.state = self.create.update()
+            self.odometry.update(self.state.leftEncoderCounts, self.state.rightEncoderCounts)
+            self.pf.TurnRight()
+            for particle in self.pf.getParticles():
+                self.showParticles([particle.x,particle.y,0.1,particle.theta])
+                    
+        #Actually move forward
+        self.create.drive_direct(50,50)
+        self.time.sleep(1)
+        self.create.drive_direct(0,0)
+        self.state = self.create.update()
+        self.odometry.update(self.state.leftEncoderCounts, self.state.rightEncoderCounts)
+        self.pf.MoveForward()
 
     def run(self):
         self.create.start()
@@ -76,21 +133,16 @@ class Run:
                 #b = self.virtual_create.get_last_button()
                 if self.pf.isOneCluster():
                     break
-                if bNum % 3 == 0:
+                if bNum % 2 == 0:
                     b = self.virtual_create.Button.Sense
-                elif bNum % 3 == 1:
+                elif bNum % 4 == 1:
                     b = self.virtual_create.Button.TurnLeft
-                elif bNum % 3 == 2:
+                elif bNum % 4 == 3:
                     b = self.virtual_create.Button.MoveForward
                 bNum += 1
                 if b == self.virtual_create.Button.MoveForward:
                     print("Forward pressed!")
-                    self.create.drive_direct(50,50)
-                    self.time.sleep(1)
-                    self.create.drive_direct(0,0)
-                    self.state = self.create.update()
-                    self.odometry.update(self.state.leftEncoderCounts, self.state.rightEncoderCounts)
-                    self.pf.MoveForward()
+                    self.findAndGoOnClearPath()
                     print("Drawing particles")
                     for particle in self.pf.getParticles():
                         self.showParticles([particle.x,particle.y,0.1,particle.theta])
