@@ -82,6 +82,7 @@ class ParticleFilter:
         for particle in self.particles:
             particle.numeratorOfBayes = particle.sensorGivenLocation * particle.prevProb
             sumOfNumerators += particle.numeratorOfBayes
+        
         #Okay Cool
         N = 1 / sumOfNumerators
         newProbSum = 0
